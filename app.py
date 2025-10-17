@@ -5,7 +5,6 @@ import os
 from datetime import datetime
 from dotenv import load_dotenv
 from openai import OpenAI
-from gunicorn import util
 
 load_dotenv()
 
