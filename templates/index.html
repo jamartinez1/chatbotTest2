@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chatbot de Preguntas Frecuentes - Relativity</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>Chatbot de Preguntas Frecuentes sobre Lanzamientos de Relativity</h1>
+        <div class="chat-container">
+            <div id="chat-messages" class="chat-messages">
+                <div class="message bot-message">
+                    <strong>Bot:</strong> ¡Hola! Soy un asistente experto en lanzamientos de Relativity. ¿En qué puedo ayudarte hoy? Pregúntame sobre nuevas funcionalidades, mejoras o cualquier cosa relacionada con los lanzamientos.
+                </div>
+            </div>
+            <div class="chat-input">
+                <input type="text" id="user-input" placeholder="Escribe tu pregunta aquí..." />
+                <button id="send-button">Enviar</button>
+            </div>
+            <div id="contact-form" class="contact-form" style="display: none;">
+                <p>Para recibir soporte adicional, por favor proporciona tus datos de contacto:</p>
+                <input type="text" id="contact-name" placeholder="Tu nombre" required />
+                <input type="email" id="contact-email" placeholder="tu@email.com" required />
+                <input type="text" id="contact-organization" placeholder="Tu organización" required />
+                <button id="submit-contact">Enviar Contacto</button>
+            </div>
+        </div>
+    </div>
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>

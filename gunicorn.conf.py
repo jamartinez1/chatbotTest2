@@ -1,0 +1,10 @@
+workers = 1
+worker_class = 'sync'
+bind = '0.0.0.0:8000'
+timeout = 30
+keepalive = 2
+loglevel = 'info'
+accesslog = '-'
+errorlog = '-'
+pidfile = 'gunicorn.pid'
+raw_env = ['FLASK_ENV=production']
