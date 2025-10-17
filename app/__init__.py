@@ -5,7 +5,6 @@ import os
 from datetime import datetime
 from dotenv import load_dotenv
 from openai import OpenAI
-from app.extensions import db
 
 load_dotenv()
 
@@ -15,9 +14,6 @@ app.secret_key = os.getenv('SECRET_KEY', 'default_secret_key')
 # Configurar la aplicación para usar la carpeta templates y static desde la raíz
 app.template_folder = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'templates')
 app.static_folder = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'static')
-
-# Inicializar extensiones
-db.init_app(app)
 
 client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
 GOOGLE_SCRIPT_URL = os.getenv('GOOGLE_SCRIPT_URL')
