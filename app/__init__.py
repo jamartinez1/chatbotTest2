@@ -28,35 +28,77 @@ def load_csv_data():
     return df
 
 def is_greeting(query):
-    greetings = ['hola', 'buenos días', 'buenas tardes', 'buenas noches', 'saludos', 'hey', 'hi']
+    # Lista de saludos más precisa
+    greetings = ['hola', 'buenos días', 'buenas tardes', 'buenas noches', 'saludos', 'hey', 'hi', 'hello', 'good morning', 'good afternoon', 'good evening']
     query_lower = query.lower().strip()
-    return any(greeting in query_lower for greeting in greetings)
+
+    # Solo considera saludo si la consulta es corta (menos de 10 palabras) y contiene un saludo
+    words = query_lower.split()
+    if len(words) > 10:
+        return False
+
+    # Verifica si la consulta es principalmente un saludo (no una pregunta)
+    has_greeting = any(greeting in query_lower for greeting in greetings)
+    has_question_words = any(word in query_lower for word in ['qué', 'que', 'cómo', 'como', 'cuándo', 'cuando', 'dónde', 'donde', 'por qué', 'porque', 'quién', 'quien'])
+
+    # Si tiene palabras de pregunta, no es un saludo
+    if has_question_words:
+        return False
+
+    return has_greeting
 
 def search_releases(query, df):
+    query_lower = query.lower()
+
+    # Buscar en descripción y módulo
     relevant_rows = df[df['Descripcion'].str.contains(query, case=False, na=False) |
                         df['Modulo'].str.contains(query, case=False, na=False)]
+
+    # Si no encuentra resultados, intentar búsqueda más amplia
+    if relevant_rows.empty:
+        # Buscar por palabras clave relacionadas
+        keywords = query_lower.split()
+        for keyword in keywords:
+            if len(keyword) > 3:  # Solo palabras significativas
+                temp_rows = df[df['Descripcion'].str.contains(keyword, case=False, na=False) |
+                              df['Modulo'].str.contains(keyword, case=False, na=False)]
+                if not temp_rows.empty:
+                    relevant_rows = temp_rows
+                    break
+
     if relevant_rows.empty:
         return "No encontré información específica sobre esa consulta en los lanzamientos de Relativity."
-    context = relevant_rows.head(10).to_string(index=False)
+
+    # Ordenar por fecha más reciente y limitar resultados
+    relevant_rows = relevant_rows.sort_values('Fecha Inicio', ascending=False)
+    context = relevant_rows.head(15).to_string(index=False)
     return context
 
 def generate_response(query, context):
     prompt = f"""
-Eres un asistente experto en lanzamientos de Relativity. Responde preguntas basadas en la información proporcionada sobre los lanzamientos.
+Eres un asistente experto en lanzamientos de Relativity. Tu tarea es responder preguntas específicas sobre lanzamientos, mejoras y funcionalidades basadas en la información proporcionada.
 
-Información de lanzamientos:
+INFORMACIÓN DE LANZAMIENTOS DISPONIBLE:
 {context}
 
-Pregunta del usuario: {query}
+PREGUNTA DEL USUARIO: {query}
 
-Responde de manera clara, concisa y útil. Si no hay información suficiente o la pregunta es demasiado compleja para responder con los datos disponibles, solicita los datos de contacto del usuario (nombre, correo electrónico y organización) para brindar soporte adicional. Incluye en tu respuesta una indicación clara de que necesitas estos datos para continuar.
+INSTRUCCIONES:
+1. Responde de manera específica y detallada basada únicamente en la información proporcionada arriba.
+2. Si la información no cubre completamente la pregunta, menciona qué aspectos específicos no están disponibles en los datos actuales.
+3. NO uses frases genéricas como "¡Hola! Soy un asistente experto..." a menos que sea realmente un saludo.
+4. Si la pregunta requiere información adicional que no está en los datos, sugiere contactar al equipo de soporte, pero solo si es realmente necesario.
+5. Mantén las respuestas concisas pero informativas.
+6. Si no hay información relevante, di explícitamente qué buscaste y por qué no encontraste resultados.
+
+Responde directamente a la pregunta del usuario.
 """
     try:
         response = client.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=[{"role": "system", "content": prompt}],
-            max_tokens=500,
-            temperature=0.7
+            max_tokens=600,
+            temperature=0.3  # Reducir temperatura para respuestas más consistentes
         )
         return response.choices[0].message.content.strip()
     except Exception as e:
@@ -95,13 +137,22 @@ def ask():
     if not question:
         return jsonify({'error': 'Pregunta vacía'}), 400
 
+    # Agregar logging para depuración
+    print(f"Pregunta recibida: '{question}'")
+
     if is_greeting(question):
+        print("Detectado como saludo")
         answer = "¡Hola! Soy un asistente experto en lanzamientos de Relativity. ¿En qué puedo ayudarte hoy? Pregúntame sobre nuevas funcionalidades, mejoras o cualquier cosa relacionada con los lanzamientos."
         requires_contact = False
     else:
+        print("Procesando pregunta sobre lanzamientos")
         df = load_csv_data()
         context = search_releases(question, df)
+        print(f"Contexto encontrado: {len(context)} caracteres")
+
         answer = generate_response(question, context)
+        print(f"Respuesta generada: '{answer[:100]}...'")
+
         requires_contact = 'email' in answer.lower() or 'contacto' in answer.lower() or 'soporte adicional' in answer.lower() or 'nombre' in answer.lower() or 'organización' in answer.lower()
 
         if requires_contact:
